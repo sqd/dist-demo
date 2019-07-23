@@ -12,13 +12,52 @@ class BaseNode {
         this.edges = new Array();
     }
 
+    init() {}
+
     setSVG(circle, text) {
         this.circleSVG = circle;
         this.textSVG = text;
     }
 
-    onMessage(sender, msg) {
+    onMessage(edge, msg) {
+        alert(`${this.constructor.name}::onMessage(edge, msg) not implemented!`);
+    }
 
+    setText(t) {
+        this.textSVG.text(t);
+    }
+
+    outgoing() {
+        const self = this;
+        return this.edges.filter(function(e) {
+            return e.from === self;
+        });
+    }
+
+    incoming() {
+        const self = this;
+        return this.edges.filter(function(e) {
+            return e.to === self;
+        });
+    }
+
+    sendMsg(to, msg) {
+        const self = this;
+
+        let edge = null;
+        for (const i in this.edges) {
+            const e = self.edges[i];
+            if (e.to === to) {
+                edge = e;
+                break;
+            };
+        }
+        if (edge === null) {
+            alert(`Invalid message recipient!`);
+            // TODO stop the process
+            return;
+        }
+        app.message(edge, msg);
     }
 }
 
@@ -42,10 +81,12 @@ class App {
 
         this.nodes = new Array();
 
-        this.curNodeClass = BaseNode;
-        this.curInitColor = 'black';
+        this.curNodeClass = null;
+        this.curNodeColor = 'black';
 
         this.curEdgeClass = BaseEdge;
+
+        this.sending = new Set();
     }
 
     onClickAddNode(x, y) {
@@ -54,7 +95,7 @@ class App {
         const node = new this.curNodeClass();
 
         const tag = this.nodes.length.toString();
-        view.drawNode(node, x, y, this.curInitColor, tag);
+        view.drawNode(node, x, y, this.curNodeColor, tag);
 
         // Update the model
         this.nodes.push(node);
@@ -74,6 +115,32 @@ class App {
         // Update the model
         n1.edges.push(edge);
         n2.edges.push(edge);
+    }
+
+    message(e, msg, color = 'lightskyblue') {
+        const self = this;
+
+        // Create the message circle
+        const msgSVG = svg.circle(10);
+        msgSVG.fill(color);
+        msgSVG.cx(0).cy(0);
+
+        // Anime it
+        const path = anime.path(e.pathSVG.node);
+        const sendAnim = anime({
+            targets: msgSVG.node,
+            translateX: path('x'),
+            translateY: path('y'),
+            duration: 2000,
+            easing: 'linear',
+            complete: function() {
+                msgSVG.remove();
+                e.to.onMessage(e, msg);
+                self.sending.delete(sendAnim);
+            }
+        });
+
+        this.sending.add(sendAnim);
     }
 }
 
@@ -259,15 +326,54 @@ function main() {
     // View
     view = new View(svg);
 
-    // Init editors
-    editor = ace.edit("configure-input");
-    editor.setTheme("ace/theme/monokai");
-    editor.session.setMode("ace/mode/javascript");
-
     // Binding
-    document.app = app;
-    document.view = view;
-    document.svg = svg;
+    window.app = app;
+    window.view = view;
+    window.svg = svg;
+    window.BaseNode = BaseNode;
+    window.BaseEdge = BaseEdge;
+
+    // Event
+    $('#node-class').on('input', function() {
+        try {
+            app.curNodeClass = null;
+            app.curNodeClass = eval($(this).val());
+            if (typeof app.curNodeClass !== 'function' || !(new app.curNodeClass() instanceof BaseNode)) {
+                app.curNodeClass = null;
+            }
+        } catch (error) {}
+        if (app.curNodeClass === null) {
+            $(this).css('background-color', 'pink');
+        } else {
+            $(this).css('background-color', 'palegreen');
+        }
+    });
+    $('#edge-class').on('input', function() {
+        try {
+            app.curEdgeClass = null;
+            app.curEdgeClass = eval($(this).val());
+            if (typeof app.curEdgeClass !== 'function' || !(new app.curEdgeClass() instanceof BaseEdge)) {
+                app.curEdgeClass = null;
+            }
+        } catch (error) {}
+        if (app.curEdgeClass === null) {
+            $(this).css('background-color', 'pink');
+        } else {
+            $(this).css('background-color', 'palegreen');
+        }
+    });
+    $('#node-color-text').on('input', function() {
+        if ($(this).val() !== '') {
+            $('#node-color').css('color', $(this).val());
+            app.curNodeColor = $('#node-color').css('color');
+        }
+    });
+    $('#edge-color-text').on('input', function() {
+        if ($(this).val() !== '') {
+            $('#edge-color').css('color', $(this).val());
+            app.curEdgeColor = $('#edge-color').css('color');
+        }
+    });
 }
 
 $(document).ready(function() {

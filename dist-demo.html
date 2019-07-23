@@ -14,14 +14,39 @@
 </head>
 
 <body>
-    <div id="background"></div>
-    <div id="control-panel">
-        <div id="configure-input">const a = 123;</div>
-    </div>
+    <div id="background" style="left: 0px; top: 0px; position: absolute; width: 800px; height: 500px;"></div>
+    <div id="control-panel" style="position: absolute; top: 500px; left:0px; width: 800px;height:100px; flex-flow: row; display: flex;">
+        <div class="panel">
+            <div style="margin: 5px">
+                <span id='node-color' style="font-weight: bold; color: black;">Node Color: </span><input class="long-input" type="text" id="node-color-text" value="black">
+            </div>
+            <div style="margin: 5px">
+                <span>Node Class: </span><input class="long-input" type="text" id="node-class" style="background-color: pink;">
+            </div>
+        </div>
+        <div class="panel">
+            <div style="margin: 5px;">
+                <span id='edge-color' style="font-weight: bold; color: hotpink;">Edge Color: </span><input class="long-input" style="text-shadow: 0.05em 0.05em white;" type="text" id="edge-color-text" value="hotpink">
+            </div>
+            <div style="margin: 5px;">
+                <span>Edge Class: </span><input class="long-input" type="text" id="node-class" value="BaseEdge" style="background-color: palegreen">
+            </div>
+        </div>
+        <div class="presets">
+            <button class="dropdown-btn">Presets</button>
+            <div class="dropdown-content">
+                <a href="#">Link 1</a>
+                <a href="#">Link 2</a>
+                <a href="#">Link 3</a>
+                <a href="#">Link 3</a>
+                <a href="#">Link 3</a>
+                <a href="#">Link 3</a>
+                <a href="#">Link 3</a>
+                <a href="#">Link 3</a>
+            </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/ace.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/theme-monokai.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.5/mode-javascript.js"></script>
+        </div>
+    </div>
 
     <script type="module" src="app.mjs"></script>
 </body>
