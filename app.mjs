@@ -7,6 +7,8 @@ class BaseNode {
     constructor() {
         this.circleSVG = null;
         this.textSVG = null;
+
+        this.edges = new Array();
     }
 
     setSVG(circle, text) {
@@ -23,6 +25,11 @@ class BaseEdge {
     constructor(from, to) {
         this.from = from;
         this.to = to;
+        this.pathSVG = null;
+    }
+
+    setSVG(svg) {
+        this.pathSVG = svg;
     }
 }
 
@@ -31,7 +38,6 @@ class App {
         this.svg = svg;
 
         this.nodes = new Array();
-        this.edges = {}
 
         this.curNodeClass = BaseNode;
         this.curInitColor = 'black';
@@ -39,7 +45,7 @@ class App {
         this.curEdgeClass = BaseEdge;
     }
 
-    clickAddNode(x, y) {
+    onClickAddNode(x, y) {
         console.log(`Add node at ${x}, ${y} (total: ${this.nodes.length})`);
 
         const node = new this.curNodeClass();
@@ -49,41 +55,41 @@ class App {
 
         // Update the model
         this.nodes.push(node);
-        this.edges[node] = new Array();
     }
 
-    dragAddEdge(n1, n2, x1, y1, x2, y2) {
-        // console.log(`Edge from ${n1.text} to ${n2.text}`);
+    onDrawEdge(n1, n2) {
+        console.log(`Edge from ${n1.textSVG.text()} to ${n2.textSVG.text()}`);
 
         const edge = new this.curEdgeClass(n1, n2);
 
+        const x1 = n1.circleSVG.cx(),
+            y1 = n1.circleSVG.cy(),
+            x2 = n2.circleSVG.cx(),
+            y2 = n2.circleSVG.cy();
         view.drawEdge(edge, x1, y1, x2, y2);
 
         // Update the model
-    }
-
-    addNode(obj, color, x, y, neighbours) {
-
+        n1.edges.push(edge);
+        n2.edges.push(edge);
     }
 }
 
 class View {
     constructor(svg) {
-        self = this;
+        const self = this;
 
         self.svg = svg;
         svg.text("Left Click to Add Nodes\nLeft Drag to Move Nodes\nRight Click to Delete Nodes\nRight Drag to Add Edges").x(0).y(0);
 
         self.leftDragging = null;
-        self.rightDragFromNode = null;
-        self.rightDragFromCircle = null;
+        self.rightDragging = null;
 
         // Setup clicking to add node
         $(svg.node).click(function(ev) {
             if (ev.target !== svg.node) {
                 return;
             }
-            app.clickAddNode(ev.pageX, ev.pageY);
+            app.onClickAddNode(ev.pageX, ev.pageY);
         });
 
         // Disable right click menu
@@ -93,13 +99,12 @@ class View {
 
         // Make a node dragged by the left btn follow cursor
         $(svg.node).mousemove(function(ev) {
+            // If not dragging, this is just a normal mouse-move
             if (self.leftDragging === null) {
                 return;
             }
-            self.leftDragging.forEach(e => {
-                e.cx(ev.pageX);
-                e.cy(ev.pageY);
-            });
+            // Move the current dragging node
+            self.moveNode(self.leftDragging, ev.pageX, ev.pageY);
         });
 
         // If a node dragged by the left btn leave the canvas
@@ -113,7 +118,7 @@ class View {
     Draw a node and setup its events
     */
     drawNode(node, x, y, color, tag) {
-        self = this;
+        const self = this;
 
         // Draw the circle
         const circle = self.svg.circle(30).cx(x).cy(y);
@@ -128,37 +133,37 @@ class View {
         circle.mousedown(function(ev) {
             switch (ev.which) {
                 case 1:
-                    self.leftDragging = [circle, text];
+                    // Start dragging the node around
+                    self.leftDragging = node;
                     break;
                 case 3:
-                    self.rightDragFromNode = node;
-                    self.rightDragFromCircle = circle;
+                    // Start adding an edge
+                    self.rightDragging = node;
                     break
             }
         });
         circle.mouseup(function(ev) {
             switch (ev.which) {
                 case 1:
+                    // Stop dragging the node around
                     self.leftDragging = null;
                     break;
                 case 3:
-                    const fromCircle = self.rightDragFromCircle;
-                    if (ev.target === self.rightDragFromCircle.node) {
+                    // Add an edge
+                    const from = self.rightDragging;
+                    // Ignore if stop on self
+                    if (ev.target === from.circleSVG.node) {
                         return;
                     }
-                    const x1 = fromCircle.cx(),
-                        y1 = fromCircle.cy();
-                    const x2 = circle.cx(),
-                        y2 = circle.cy();
-                    console.log(`${x1},${y1} -> ${x2},${y2}`);
-                    app.dragAddEdge(self.rightDragFromNode, node, x1, y1, x2, y2);
-                    self.rightDragFromNode = null;
-                    self.rightDragFromCircle = null;
+                    // Tell control
+                    app.onDrawEdge(self.rightDragging, node);
+                    // Reset
+                    self.rightDragging = null;
                     break;
             }
         });
 
-        // Disable right click menu
+        // Disable right click menu on the circle
         $(circle.node).contextmenu(function(ev) {
             ev.preventDefault();
         });
@@ -177,12 +182,33 @@ class View {
 
         const pathdir = `M${x1} ${y1} A ${longRadius} ${shortRadius} ${rotation} 0 0 ${x2} ${y2}`;
 
-        const path = svg.path(pathdir);
+        const path = e.pathSVG === null ? svg.path() : e.pathSVG;
+        path.plot(pathdir);
         path.fill('none');
-        path.stroke({ color: '#f06', width: 4, linecap: 'round', linejoin: 'round' })
+        path.stroke({ color: '#f06', width: 4 })
         path.back();
+
+        e.setSVG(path);
     }
 
+    moveNode(node, x, y) {
+        const self = this;
+
+        node.circleSVG.cx(x).cy(y);
+        node.textSVG.cx(x).cy(y);
+
+        node.edges.forEach(edge => {
+            if (node === edge.from) {
+                // The 'from' node is moved
+                const to = edge.to.circleSVG;
+                self.drawEdge(edge, x, y, to.cx(), to.cy());
+            } else {
+                // The 'to' node is moved
+                const from = edge.from.circleSVG;
+                self.drawEdge(edge, from.cx(), from.cy(), x, y);
+            }
+        });
+    }
 }
 
 var svg;
