@@ -25,6 +25,11 @@ class BaseNode {
 
     setText(t) {
         this.textSVG.text(t);
+        this.textSVG.cx(this.circleSVG.cx()).cy(this.circleSVG.cy());
+    }
+
+    setColor(c) {
+        this.circleSVG.fill(c);
     }
 
     outgoing() {
@@ -59,6 +64,15 @@ class BaseNode {
         }
         app.message(edge, msg);
     }
+
+    sendMessage(to, msg) {
+        this.sendMsg(to, msg);
+    }
+
+    randomNeighbour() {
+        const neighbours = this.outgoing();
+        return neighbours[Math.floor(Math.random() * neighbours.length)].to;
+    }
 }
 
 class BaseEdge {
@@ -90,9 +104,9 @@ class App {
     }
 
     onClickAddNode(x, y) {
-        console.log(`Add node at ${x}, ${y} (total: ${this.nodes.length})`);
-
         const node = new this.curNodeClass();
+        console.log(`Add ${node.constructor.name} at ${x}, ${y} (total: ${this.nodes.length})`);
+        node.init();
 
         const tag = this.nodes.length.toString();
         view.drawNode(node, x, y, this.curNodeColor, tag);
@@ -102,9 +116,15 @@ class App {
     }
 
     onDrawEdge(n1, n2) {
-        console.log(`Edge from ${n1.textSVG.text()} to ${n2.textSVG.text()}`);
+        n1.edges.forEach(e => {
+            if (e.from === n2) {
+                return;
+            }
+        });
 
         const edge = new this.curEdgeClass(n1, n2);
+
+        console.log(`${edge.constructor.name} edge from ${n1.textSVG.text()} to ${n2.textSVG.text()}`);
 
         const x1 = n1.circleSVG.cx(),
             y1 = n1.circleSVG.cy(),
@@ -160,6 +180,10 @@ class View {
             if (ev.target !== svg.node) {
                 return;
             }
+            if (app.curNodeClass === null) {
+                alert('Set a valid node class first!');
+                return;
+            }
             app.onClickAddNode(ev.pageX, ev.pageY);
         });
 
@@ -182,6 +206,50 @@ class View {
         // Drop it at the border
         $(svg.node).mouseleave(function() {
             self.leftDragging = null;
+        });
+
+        // Node class and Edge class
+        $('#node-class').on('input', function() {
+            try {
+                app.curNodeClass = null;
+                app.curNodeClass = eval($(this).val());
+                if (typeof app.curNodeClass !== 'function' || !(new app.curNodeClass() instanceof BaseNode)) {
+                    app.curNodeClass = null;
+                }
+            } catch (error) {}
+            if (app.curNodeClass === null) {
+                $(this).css('background-color', 'pink');
+            } else {
+                $(this).css('background-color', 'palegreen');
+            }
+        });
+        $('#edge-class').on('input', function() {
+            try {
+                app.curEdgeClass = null;
+                app.curEdgeClass = eval($(this).val());
+                if (typeof app.curEdgeClass !== 'function' || !(new app.curEdgeClass() instanceof BaseEdge)) {
+                    app.curEdgeClass = null;
+                }
+            } catch (error) {}
+            if (app.curEdgeClass === null) {
+                $(this).css('background-color', 'pink');
+            } else {
+                $(this).css('background-color', 'palegreen');
+            }
+        });
+
+        // Colors
+        $('#node-color-text').on('input', function() {
+            if ($(this).val() !== '') {
+                $('#node-color').css('color', $(this).val());
+                app.curNodeColor = $('#node-color').css('color');
+            }
+        });
+        $('#edge-color-text').on('input', function() {
+            if ($(this).val() !== '') {
+                $('#edge-color').css('color', $(this).val());
+                app.curEdgeColor = $('#edge-color').css('color');
+            }
         });
     }
 
@@ -333,47 +401,6 @@ function main() {
     window.BaseNode = BaseNode;
     window.BaseEdge = BaseEdge;
 
-    // Event
-    $('#node-class').on('input', function() {
-        try {
-            app.curNodeClass = null;
-            app.curNodeClass = eval($(this).val());
-            if (typeof app.curNodeClass !== 'function' || !(new app.curNodeClass() instanceof BaseNode)) {
-                app.curNodeClass = null;
-            }
-        } catch (error) {}
-        if (app.curNodeClass === null) {
-            $(this).css('background-color', 'pink');
-        } else {
-            $(this).css('background-color', 'palegreen');
-        }
-    });
-    $('#edge-class').on('input', function() {
-        try {
-            app.curEdgeClass = null;
-            app.curEdgeClass = eval($(this).val());
-            if (typeof app.curEdgeClass !== 'function' || !(new app.curEdgeClass() instanceof BaseEdge)) {
-                app.curEdgeClass = null;
-            }
-        } catch (error) {}
-        if (app.curEdgeClass === null) {
-            $(this).css('background-color', 'pink');
-        } else {
-            $(this).css('background-color', 'palegreen');
-        }
-    });
-    $('#node-color-text').on('input', function() {
-        if ($(this).val() !== '') {
-            $('#node-color').css('color', $(this).val());
-            app.curNodeColor = $('#node-color').css('color');
-        }
-    });
-    $('#edge-color-text').on('input', function() {
-        if ($(this).val() !== '') {
-            $('#edge-color').css('color', $(this).val());
-            app.curEdgeColor = $('#edge-color').css('color');
-        }
-    });
 }
 
 $(document).ready(function() {
