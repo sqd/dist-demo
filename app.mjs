@@ -116,11 +116,11 @@ class App {
     }
 
     onDrawEdge(n1, n2) {
-        n1.edges.forEach(e => {
-            if (e.from === n2) {
+        for (let i = 0; i < n1.edges.length; i++) {
+            if (n1.edges[i].to === n2) {
                 return;
             }
-        });
+        }
 
         const edge = new this.curEdgeClass(n1, n2);
 
