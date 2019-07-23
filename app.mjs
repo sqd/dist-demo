@@ -27,10 +27,12 @@ class BaseEdge {
         this.from = from;
         this.to = to;
         this.pathSVG = null;
+        this.arrowSVG = null;
     }
 
-    setSVG(svg) {
-        this.pathSVG = svg;
+    setSVG(path, arrow) {
+        this.pathSVG = path;
+        this.arrowSVG = arrow;
     }
 }
 
@@ -80,7 +82,8 @@ class View {
         const self = this;
 
         self.svg = svg;
-        svg.text("Left Click to Add Nodes\nLeft Drag to Move Nodes\nRight Click to Delete Nodes\nRight Drag to Add Edges").x(0).y(0);
+        self.text = svg.text("Left Click to Add Nodes\nLeft Drag to Move Nodes\nRight Click to Delete Nodes\nRight Drag to Add Edges").x(0).y(0);
+        self.text.addClass('svg-text');
 
         self.leftDragging = null;
         self.rightDragging = null;
@@ -123,11 +126,11 @@ class View {
 
         // Draw the circle
         const circle = self.svg.circle(30).cx(x).cy(y);
-        circle.attr({ class: "draggable" });
+        circle.addClass('draggable');
         circle.fill(color);
 
         const text = self.svg.text(tag).cx(x).cy(y);
-        text.attr({ class: "svg-text" });
+        text.addClass('svg-text');
         text.fill('white');
 
         // Mouse events
@@ -177,7 +180,7 @@ class View {
     */
     drawEdge(e, x1, y1, x2, y2) {
         const radius = 15; // TODO magic number
-        const rotation = Math.atan((y1 - y2) / (x1 - x2)) / Math.PI * 180;
+        var rotation = Math.atan((y1 - y2) / (x1 - x2)) / Math.PI * 180;
         const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
 
         const x1_ = utils.interpolate(x1, x2, radius / dist),
@@ -196,7 +199,28 @@ class View {
         path.stroke({ color: '#f06', width: 4 })
         path.back();
 
-        e.setSVG(path);
+
+        // TODO figure out how to reuse arrow
+        const mid = path.pointAt(path.length() / 2);
+        const arrow = svg.polygon();
+        arrow.plot([
+            [-5, -5],
+            [0, 10],
+            [5, -5]
+        ]);
+        arrow.fill('#f06');
+        arrow.cx(mid.x).cy(mid.y);
+
+        if (x1_ >= x2_) {
+            rotation += 180;
+        }
+        arrow.rotate(rotation - 90, mid.x, mid.y);
+
+        if (e.arrowSVG) {
+            e.arrowSVG.replace(arrow);
+        }
+
+        e.setSVG(path, arrow);
     }
 
     moveNode(node, x, y) {
