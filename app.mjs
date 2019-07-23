@@ -1,7 +1,8 @@
 'use strict';
 import anime from './js/anime.es.mjs';
-import $ from './js/jquery.min.mjs'
-import SVG from './js/svg.min.mjs'
+import $ from './js/jquery.min.mjs';
+import SVG from './js/svg.min.mjs';
+import utils from './js/utils.mjs';
 
 class BaseNode {
     constructor() {
@@ -175,12 +176,19 @@ class View {
     Draw an edge and setup events
     */
     drawEdge(e, x1, y1, x2, y2) {
-        // var path = draw.path(`M${e.from.x} ${e.from.y} S 125 150 ${e.to.x} ${e.to.y}`);
+        const radius = 15; // TODO magic number
         const rotation = Math.atan((y1 - y2) / (x1 - x2)) / Math.PI * 180;
-        const longRadius = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) / 2;
+        const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+
+        const x1_ = utils.interpolate(x1, x2, radius / dist),
+            y1_ = utils.interpolate(y1, y2, radius / dist),
+            x2_ = utils.interpolate(x2, x1, radius / dist),
+            y2_ = utils.interpolate(y2, y1, radius / dist);
+
+        const longRadius = dist / 2 - 2 * radius;
         const shortRadius = longRadius / 5;
 
-        const pathdir = `M${x1} ${y1} A ${longRadius} ${shortRadius} ${rotation} 0 0 ${x2} ${y2}`;
+        const pathdir = `M${x1_} ${y1_} A ${longRadius} ${shortRadius} ${rotation} 0 0 ${x2_} ${y2_}`;
 
         const path = e.pathSVG === null ? svg.path() : e.pathSVG;
         path.plot(pathdir);
