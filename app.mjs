@@ -87,6 +87,12 @@ class BaseEdge {
         this.pathSVG = path;
         this.arrowSVG = arrow;
     }
+
+    init() {
+        const color = $('#edge-color').css('color');
+        this.pathSVG.stroke({ color: color });
+        this.arrowSVG.fill(color);
+    }
 }
 
 class App {
@@ -356,6 +362,7 @@ class View {
         }
 
         e.setSVG(path, arrow);
+        e.init();
     }
 
     moveNode(node, x, y) {
